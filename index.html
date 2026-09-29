@@ -1,4 +1,4 @@
-          <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
@@ -879,27 +879,41 @@
           minx = Math.min(minx, p.x); miny = Math.min(miny, p.y);
           maxx = Math.max(maxx, p.x); maxy = Math.max(maxy, p.y);
         });
-        const topBand = useTri ? 12 : 36;
+        const topBand = useTri ? 12 : 50;
         const side = useTri ? 58 : 24;
         const bot = useTri ? 52 : 16;
         const bw = Math.max(1, maxx - minx);
         const bh = Math.max(1, maxy - miny);
-        const cell = Math.max(10, Math.floor(Math.min((W - side * 2) / bw, (H - topBand - bot) / bh)));
-        state.grid = cell;
-        const scale = cell;
-        const figW = bw * scale, figH = bh * scale;
-        let ox = (W - figW) / 2 - minx * scale;
-        let oy = topBand + (H - topBand - figH) / 2 + maxy * scale;
-        ox = Math.round(ox / cell) * cell;
-        oy = Math.round(oy / cell) * cell;
         const mL = useTri ? 50 : 8, mR = W - (useTri ? 50 : 8);
         const mT = useTri ? 8 : topBand, mB = H - (useTri ? 44 : 8);
-        let left = ox + minx * scale, right = ox + maxx * scale;
-        let top = oy - maxy * scale, btm = oy - miny * scale;
-        if (left < mL) { const d = Math.ceil((mL - left) / cell) * cell; ox += d; left += d; right += d; }
-        if (right > mR) { const d = Math.ceil((right - mR) / cell) * cell; ox -= d; left -= d; right -= d; }
-        if (top < mT) { const d = Math.ceil((mT - top) / cell) * cell; oy += d; top += d; btm += d; }
-        if (btm > mB) { const d = Math.ceil((btm - mB) / cell) * cell; oy -= d; }
+        let cell = Math.max(10, Math.floor(Math.min((W - side * 2) / bw, (H - topBand - bot) / bh)));
+        function placeAt(cellSize) {
+          const sc = cellSize;
+          const figW = bw * sc, figH = bh * sc;
+          let x0 = (W - figW) / 2 - minx * sc;
+          let y0 = topBand + (H - topBand - figH) / 2 + maxy * sc;
+          x0 = Math.round(x0 / cellSize) * cellSize;
+          y0 = Math.round(y0 / cellSize) * cellSize;
+          let left = x0 + minx * sc, right = x0 + maxx * sc;
+          let top = y0 - maxy * sc, btm = y0 - miny * sc;
+          if (left < mL) { const d = Math.ceil((mL - left) / cellSize) * cellSize; x0 += d; left += d; right += d; }
+          if (right > mR) { const d = Math.ceil((right - mR) / cellSize) * cellSize; x0 -= d; left -= d; right -= d; }
+          if (top < mT) { const d = Math.ceil((mT - top) / cellSize) * cellSize; y0 += d; top += d; btm += d; }
+          if (btm > mB) { const d = Math.ceil((btm - mB) / cellSize) * cellSize; y0 -= d; top -= d; btm -= d; }
+          return { ox: x0, oy: y0, scale: sc, left, right, top, btm };
+        }
+        let fit = placeAt(cell);
+        while (cell > 10 && (fit.top < mT - 0.5 || fit.btm > mB + 0.5 || fit.left < mL - 0.5 || fit.right > mR + 0.5)) {
+          cell -= 1;
+          fit = placeAt(cell);
+        }
+        if (fit.top < mT) {
+          const d = mT - fit.top;
+          fit.oy += d; fit.top += d; fit.btm += d;
+        }
+        state.grid = cell;
+        const scale = fit.scale;
+        let ox = fit.ox, oy = fit.oy;
         const xf = (p) => ({
           x: ox + p.x * scale,
           y: oy - p.y * scale
